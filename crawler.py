@@ -15,21 +15,19 @@ from tokenmds.exchange.huobi import Huobi
 from tokenmds.exchange.okex import OKEx
 
 
-symbols = 'BTC-USDT, ETH-BTC, ETH-USDT, EOS-BTC, EOS-USDT, EOS-ETH, BCD-BTC, ETC-BTC, ETC-USDT, XRP-BTC, XRP-USDT, LTC-BTC, LTC-USDT, QTUM-BTC, QTUM-USDT, QTUM-ETH, DASH-BTC, TRX-BTC, TRX-USDT, TRX-ETH, ONT-BTC, ONT-USDT, ONT-ETH, ZEC-BTC, NEO-BTC, NEO-USDT, XLM-BTC, XLM-ETH, ADA-BTC, ADA-USDT, ADA-ETH, OMG-BTC, OMG-ETH'
-
-
 class Crawler:
-    def __init__(self, exchange=None, symbols=None, tf='M1', path='./data/ohlc'):
+    def __init__(self, exchange=None, symbols=None, tf='M1', path='./data/ohlc', end=2017):
         self.path = path
         self.exchange = exchange
         self.symbols = symbols
         self.tf = tf
+        self.end = end
 
     def writer(self, data, exchange, tf, symbol, t):
         file_path = '{}/{}/{}/{}/'.format(self.path, exchange.__id__, tf.lower(), symbol)
         if not os.path.exists(file_path):
             os.makedirs(file_path)
-        filename = '{}.josn'.format(t)
+        filename = '{}.json'.format(t)
         with open(file_path + filename, 'w') as f:
             f.write(json.dumps(data))
             log(file_path + filename)
@@ -37,6 +35,8 @@ class Crawler:
     def work(self, market):
         utc = datetime.utcnow()
         while True:
+            if utc.year < self.end:
+                return
             t = utc.strftime('%Y') if self.tf == 'D1' else utc.strftime('%Y-%m-%d')
             ohlc = self.exchange.one(market, self.tf, t)
             if ohlc:
@@ -87,7 +87,8 @@ def run(args):
             exchange=exchange,
             symbols=symbols,
             path=args.path,
-            tf=args.tf
+            tf=args.tf,
+            end=args.end
         )
         try:
             crawler.run()
@@ -100,6 +101,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', type=str, default='./data/ohlc', help='path, e.g.: ./data/ohlc')
     parser.add_argument('--tf', type=str, default='M1', help='tf, e.g.: M1, H1, D1')
+    parser.add_argument('--end', type=int, default=2017, help='end years, e.g.: 2017')
     parser.add_argument('--options', type=str, default=None, help='options, e.g.: \'{"proxies":{"https":"socks5h://192.168.1.100:11001"}}\'')
     parser.add_argument('exchange', type=str, help='exchange ID, e.g., binance')
     parser.add_argument('symbols', type=str, nargs='+', help='list of hyphen separated symbols, e.g., ETH-BTC')
